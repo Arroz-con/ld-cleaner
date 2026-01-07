@@ -1,12 +1,12 @@
 from pathlib import Path
 import shutil
-from time import sleep
+import time
 import stat
 import sys
 import subprocess
 import requests
 
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.3"
 GITHUB_API = "https://api.github.com/repos/Arroz-con/ld-cleaner/releases/latest"
 
 
@@ -37,14 +37,33 @@ def download_and_restart(url: str):
 
     current_exe.replace(old_exe)
 
+    start = time.monotonic()
+    download = 0
+
+    def on_update(pct, speed):
+        print(f"Updating... {pct}% ({speed:.2f} MB/s)")
+
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
+        total = int(r.headers.get("Content-Length", 0))
+
         with new_exe.open("wb") as f:
             for chunk in r.iter_content(8192):
+                if not chunk:
+                    continue
+
                 f.write(chunk)
+                download += len(chunk)
+
+                elapsed = time.monotonic() - start
+                speed = (download / elapsed) / (1024 * 1024) if elapsed else 0
+                percent = int(download / total * 100) if total else 0
+
+                on_update(percent, speed)
 
     print("downloaded")
     subprocess.Popen([str(new_exe)])
+    time.sleep(2)
     sys.exit()
 
 
@@ -110,7 +129,7 @@ def main():
     except Exception as e:
         print("Error:", e)
     finally:
-        sleep(2)
+        time.sleep(2)
 
 
 if __name__ == "__main__":
