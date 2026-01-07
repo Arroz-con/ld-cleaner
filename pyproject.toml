@@ -1,0 +1,14 @@
+[project]
+name = "ldplayer-cleaner"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "rich>=14.2.0",
+]
+
+[dependency-groups]
+dev = [
+    "nuitka>=2.8.1",
+]
