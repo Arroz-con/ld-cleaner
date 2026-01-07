@@ -3,6 +3,59 @@ import shutil
 from time import sleep
 import stat
 import sys
+import subprocess
+import requests
+
+APP_VERSION = "1.0.1"
+GITHUB_API = "https://api.github.com/repos/Arroz-con/ld-cleaner/releases/latest"
+
+
+def version_tuple(v: str):
+    return tuple(map(int, v.split(".")))
+
+
+def check_for_update():
+    try:
+        r = requests.get(GITHUB_API, timeout=5)
+        r.raise_for_status()
+        data = r.json()
+
+        latest_version = data["tag_name"].lstrip("v")
+
+        if version_tuple(latest_version) > version_tuple(APP_VERSION):
+            for asset in data["assets"]:
+                if asset["name"].endswith(".exe"):
+                    download_and_restart(asset["browser_download_url"])
+    except Exception:
+        pass
+
+
+def download_and_restart(url: str):
+    current_exe = Path(sys.executable)
+    old_exe = current_exe.with_name(current_exe.stem + "_old.exe")
+    new_exe = current_exe.with_name(current_exe.stem + "_new.exe")
+
+    current_exe.replace(old_exe)
+
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with new_exe.open("wb") as f:
+            for chunk in r.iter_content(8192):
+                f.write(chunk)
+
+    print("downloaded")
+    subprocess.Popen([str(new_exe)])
+    sys.exit()
+
+
+def cleanup_old_exe():
+    old_exe = Path(sys.executable).with_name(Path(sys.executable).stem + "_old.exe")
+    if old_exe.exists():
+        try:
+            old_exe.unlink()
+            print("removed old exe")
+        except OSError:
+            pass
 
 
 def resource_path(relative_path: str) -> Path:
@@ -61,4 +114,6 @@ def main():
 
 
 if __name__ == "__main__":
+    cleanup_old_exe()
+    check_for_update()
     main()
